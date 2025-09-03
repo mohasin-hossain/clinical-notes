@@ -1,12 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import App from "./App.tsx";
+import App from "./App";
 import "./index.css";
-import Notes from "./routes/Notes.tsx";
-import Patients from "./routes/Patients.tsx";
-import Practitioners from "./routes/Practitioners.tsx";
-import { AppStateProvider } from "./state.tsx";
+import Notes from "./routes/Notes";
+import Patients from "./routes/Patients";
+import Practitioners from "./routes/Practitioners";
+import { AppStateProvider } from "./state";
 
 const router = createBrowserRouter([
   {

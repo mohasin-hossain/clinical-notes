@@ -1,6 +1,31 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  Download,
+  Edit,
+  FileText,
+  Loader2,
+  Plus,
+  Save,
+  Stethoscope,
+  User,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { DocumentReference, Patient, Practitioner } from "../fhir";
 import { fhirClient } from "../fhir";
 import { useAppState } from "../state";
@@ -194,91 +219,217 @@ export default function Notes() {
     : "";
 
   return (
-    <div className="container">
-      <div className="header">
-        <div>
-          <h2>Clinical Notes</h2>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/patients")}
+              className="p-0 h-auto"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Patients
+            </Button>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <FileText className="h-8 w-8 text-primary" />
+            Clinical Notes
+          </h1>
           {patientName && practitionerName && (
-            <div className="subtitle">
-              Patient: {patientName} • Practitioner: {practitionerName}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                <span>
+                  Patient: <span className="font-medium">{patientName}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Stethoscope className="h-4 w-4" />
+                <span>
+                  Practitioner:{" "}
+                  <span className="font-medium">{practitionerName}</span>
+                </span>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="notes-section">
-        <div className="notes-editor">
-          <div className="add-form">
-            <h3>{editingId ? "Edit Note" : "New Note"}</h3>
-            <div className="note-form">
-              <input
-                placeholder="Note title"
+      {/* Error State */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              <span className="font-medium">Error</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Note Editor */}
+        <div className="lg:col-span-2">
+          <Card className="sticky top-24">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {editingId ? (
+                  <>
+                    <Edit className="h-5 w-5" />
+                    Edit Note
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5" />
+                    New Note
+                  </>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {editingId
+                  ? "Update the clinical note below."
+                  : "Create a new clinical note for this patient."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="Note title (optional)"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 disabled={!activePatientId}
               />
-              <textarea
+              <Textarea
                 placeholder="Write clinical note…"
                 value={form.text}
                 onChange={(e) => setForm({ ...form, text: e.target.value })}
                 rows={12}
                 disabled={!activePatientId}
+                className="resize-none"
               />
-              <div className="form-actions">
-                <button
-                  className="primary"
-                  disabled={!canCreate}
+              <div className="flex gap-2">
+                <Button
                   onClick={saveNote}
+                  disabled={!canCreate}
+                  className="flex-1"
                 >
+                  <Save className="mr-2 h-4 w-4" />
                   {editingId ? "Update Note" : "Save Note"}
-                </button>
+                </Button>
                 {editingId && (
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setEditingId(null);
                       setForm({ title: "", text: "" });
                     }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 )}
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Notes List */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            <h2 className="text-xl font-semibold">Previous Notes</h2>
+            <Badge variant="secondary">{notes.length}</Badge>
           </div>
-        </div>
 
-        <div className="notes-list">
-          <h3>Previous Notes</h3>
-          {loading && <div className="loading">Loading notes...</div>}
-          {error && <div className="error">{error}</div>}
-          {!loading && !error && notes.length === 0 && (
-            <div className="empty-state">No clinical notes yet.</div>
-          )}
-          {notes.map((n) => (
-            <div key={n.id} className="note-card">
-              <div className="note-header">
-                <h4>{n.title || "Untitled"}</h4>
-                <div className="note-actions">
-                  <button onClick={() => startEdit(n.id)}>Edit</button>
-                  <button onClick={() => exportPdf(n)}>PDF</button>
+          {/* Loading State */}
+          {loading && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading notes...</span>
                 </div>
-              </div>
-              <div className="note-content">{n.text || ""}</div>
-              <div className="note-meta">
-                {n.meta?.lastUpdated && (
-                  <span>
-                    Last updated:{" "}
-                    {new Date(n.meta.lastUpdated).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              </CardContent>
+            </Card>
+          )}
 
-      <div className="nav">
-        <Link to="/patients">← Back to Patients</Link>
+          {/* Empty State */}
+          {!loading && !error && notes.length === 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="rounded-full bg-muted p-3">
+                    <FileText className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">
+                      No clinical notes yet
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Start by creating your first clinical note for this
+                      patient.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes List */}
+          {!loading && notes.length > 0 && (
+            <div className="space-y-4">
+              {notes.map((n) => (
+                <Card key={n.id} className="transition-all hover:shadow-md">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">
+                          {n.title || "Untitled Note"}
+                        </CardTitle>
+                        {n.meta?.lastUpdated && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                              {new Date(
+                                n.meta.lastUpdated
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEdit(n.id)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => exportPdf(n)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Separator />
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">
+                        {n.text || "No content available."}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
